@@ -18,7 +18,8 @@ Future<void> main() async {
     await windowManager.setAsFrameless();
     await windowManager.setResizable(false);
     await windowManager.setHasShadow(false);
-    await windowManager.show();
+    // The native runner shows this window after its first frame. Avoid
+    // windowManager.show(), which calls SetForegroundWindow on Windows.
   });
 
   runApp(const DayClockApp());
