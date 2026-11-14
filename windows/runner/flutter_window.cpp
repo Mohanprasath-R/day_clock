@@ -109,6 +109,19 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // The clock is a desktop child window. Keep it visible if Windows or a
+  // window manager sends a minimize command; shutdown messages still pass
+  // through to the normal window procedure.
+  if (message == WM_SYSCOMMAND && (wparam & 0xFFF0) == SC_MINIMIZE) {
+    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    return 0;
+  }
+
+  if (message == WM_SIZE && wparam == SIZE_MINIMIZED) {
+    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    return 0;
+  }
+
   if (message == WM_TIMER && wparam == kDesktopAttachTimer) {
     AttachToDesktop(hwnd);
     return 0;
