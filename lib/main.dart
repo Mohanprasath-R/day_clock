@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -55,6 +56,22 @@ class ClockHomePage extends StatefulWidget {
 class _ClockHomePageState extends State<ClockHomePage> {
   late DateTime _now;
   Timer? _timer;
+  double _zoom = 1.0;
+
+  static const _baseWindowSize = Size(430, 390);
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || event.scrollDelta.dy == 0) return;
+
+    final direction = event.scrollDelta.dy < 0 ? 1.0 : -1.0;
+    final nextZoom = (_zoom + direction * 0.1).clamp(0.6, 1.8).toDouble();
+    if (nextZoom == _zoom) return;
+
+    setState(() => _zoom = nextZoom);
+    unawaited(windowManager.setSize(
+      Size(_baseWindowSize.width * nextZoom, _baseWindowSize.height * nextZoom),
+    ));
+  }
 
   static const _weekdays = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -84,93 +101,66 @@ class _ClockHomePageState extends State<ClockHomePage> {
   @override
   Widget build(BuildContext context) {
     final weekday = _weekdays[_now.weekday - 1];
-    final date = '${_months[_now.month - 1]} ${_now.day}, ${_now.year}';
-    final time = '${_twoDigits(_now.hour)}:${_twoDigits(_now.minute)}';
-    final seconds = _twoDigits(_now.second);
+    final date = '${_twoDigits(_now.day)} ${_months[_now.month - 1]}, ${_now.year}';
+    final hour = _now.hour % 12 == 0 ? 12 : _now.hour % 12;
+    final period = _now.hour < 12 ? 'AM' : 'PM';
+    final time = '$hour:${_twoDigits(_now.minute)} $period';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onPanStart: (_) => windowManager.startDragging(),
-        child: SafeArea(
-          child: Center(
-            child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanStart: (_) => windowManager.startDragging(),
+          child: LayoutBuilder(
+            builder: (context, constraints) => Stack(
               children: [
-                const Text(
-                  'TODAY',
-                  style: TextStyle(
-                    color: Color(0xFFB4F0D0),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    weekday.toUpperCase(),
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontFamily: 'Anurati',
-                      fontSize: 76,
-                      letterSpacing: 5,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  date.toUpperCase(),
-                  style: const TextStyle(
-                    color: Color(0xFF9298A5),
-                    fontSize: 18,
-                    letterSpacing: 3,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        fontSize: 54,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 5,
-                        color: Colors.white,
-                        fontFeatures: [],
+                Positioned(
+                  top: constraints.maxHeight * 0.1,
+                  left: 20 * _zoom,
+                  right: 20 * _zoom,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          weekday.toUpperCase(),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Anurati',
+                            fontSize: 76 * _zoom,
+                            letterSpacing: 5 * _zoom,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      seconds,
-                      style: const TextStyle(
-                        color: Color(0xFFB4F0D0),
-                        fontSize: 15,
-                        letterSpacing: 2,
+                      SizedBox(height: 4 * _zoom),
+                      Text(
+                        date.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18 * _zoom,
+                          letterSpacing: 3 * _zoom,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: 44,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB4F0D0),
-                    borderRadius: BorderRadius.circular(2),
+                      SizedBox(height: 26 * _zoom),
+                      Text(
+                        '- $time -',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 23 * _zoom,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: _zoom,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
             ),
           ),
         ),

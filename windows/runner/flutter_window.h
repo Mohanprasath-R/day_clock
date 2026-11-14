@@ -26,6 +26,8 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  bool system_shutdown_ = false;
+
   // The project to run.
   flutter::DartProject project_;
 
